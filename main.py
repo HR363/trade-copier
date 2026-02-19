@@ -133,10 +133,10 @@ def main():
             logger.error(f"Fatal error in copier: {e}", exc_info=True)
             sys.exit(1)
     else:
-        _launch_ui(master_config, slave_configs, settings)
+        _launch_ui(master_config, slave_configs, settings, args.config)
 
 
-def _launch_ui(master_config, slave_configs, settings):
+def _launch_ui(master_config, slave_configs, settings, config_path):
     """Launch the CustomTkinter UI."""
     try:
         from src.ui_app import TradeCopierApp
@@ -149,6 +149,7 @@ def _launch_ui(master_config, slave_configs, settings):
         master_config=master_config,
         slave_configs=slave_configs,
         settings=settings,
+        config_path=config_path,
     )
     app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()

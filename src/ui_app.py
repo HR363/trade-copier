@@ -211,12 +211,14 @@ class TradeCopierApp(ctk.CTk):
         master_config: AccountConfig,
         slave_configs: List[AccountConfig],
         settings: dict,
+        config_path: str = "",
     ):
         super().__init__(fg_color=C["bg_deep"])
 
         self.master_cfg   = master_config
         self.slave_cfgs   = slave_configs
         self.settings     = settings
+        self.config_path  = config_path
 
         self._copier_thread: Optional[threading.Thread] = None
         self._copier_instance = None
@@ -303,9 +305,24 @@ class TradeCopierApp(ctk.CTk):
             height=18,
         ).pack(side="left", padx=(10, 0), pady=21)
 
-        # Right side: status pill + button
+        # Right side: accounts button + status pill + start/stop
         right = ctk.CTkFrame(header, fg_color="transparent")
         right.pack(side="right", padx=20)
+
+        ctk.CTkButton(
+            right,
+            text="⚙  Accounts",
+            width=110,
+            height=36,
+            font=(FONT_FAMILY, 12),
+            fg_color=C["bg_input"],
+            hover_color=C["bg_hover"],
+            text_color=C["muted"],
+            border_width=1,
+            border_color=C["border"],
+            corner_radius=8,
+            command=self._open_accounts_modal,
+        ).pack(side="left", padx=(0, 10))
 
         self._status_pill = ctk.CTkLabel(
             right,
@@ -351,24 +368,24 @@ class TradeCopierApp(ctk.CTk):
             anchor="w",
         ).pack(fill="x", padx=8, pady=(4, 8))
 
-        scroll = ctk.CTkScrollableFrame(
+        self._list_scroll = ctk.CTkScrollableFrame(
             sidebar,
             fg_color="transparent",
             scrollbar_button_color=C["border"],
             scrollbar_button_hover_color=C["muted2"],
         )
-        scroll.pack(fill="both", expand=True)
+        self._list_scroll.pack(fill="both", expand=True)
 
         self._account_cards: Dict[str, AccountCard] = {}
 
         # Master card
-        card = AccountCard(scroll, self.master_cfg, is_master=True)
+        card = AccountCard(self._list_scroll, self.master_cfg, is_master=True)
         card.pack(fill="x", pady=(0, 8))
         self._account_cards[str(self.master_cfg.login)] = card
 
         # Slave cards
         for sc in self.slave_cfgs:
-            card = AccountCard(scroll, sc, is_master=False)
+            card = AccountCard(self._list_scroll, sc, is_master=False)
             card.pack(fill="x", pady=(0, 8))
             self._account_cards[str(sc.login)] = card
 
@@ -713,6 +730,61 @@ class TradeCopierApp(ctk.CTk):
         self._log_text.configure(state="normal")
         self._log_text.delete("1.0", "end")
         self._log_text.configure(state="disabled")
+
+    # ── Accounts modal ───────────────────────────────────────────────────────
+
+    def _open_accounts_modal(self):
+        from src.ui_accounts import AccountsModal
+        AccountsModal(
+            parent=self,
+            config_path=self.config_path,
+            on_save=self._on_accounts_saved,
+        )
+
+    def _on_accounts_saved(self, master_raw: dict, slaves_raw: list, settings: dict):
+        """Called by the modal after the user saves. Reloads configs and rebuilds UI."""
+        from src.config import load_config, ConfigError
+
+        was_running = self._running
+        if was_running:
+            self._stop_copier()
+
+        try:
+            new_master, new_slaves, new_settings = load_config(self.config_path)
+        except ConfigError as e:
+            self._append_log_entry(
+                datetime.now().strftime("%H:%M:%S"),
+                "error", f"Config reload error: {e}",
+            )
+            return
+
+        self.master_cfg = new_master
+        self.slave_cfgs = new_slaves
+        self.settings   = new_settings
+
+        self._rebuild_account_cards()
+        self._append_log_entry(
+            datetime.now().strftime("%H:%M:%S"),
+            "info", "Accounts updated and saved.",
+        )
+
+    def _rebuild_account_cards(self):
+        """Destroy and recreate all account cards in the sidebar."""
+        # Find the scrollable list frame and clear it
+        for widget in self._list_scroll.winfo_children():
+            widget.destroy()
+        self._account_cards.clear()
+
+        # Rebuild master card
+        card = AccountCard(self._list_scroll, self.master_cfg, is_master=True)
+        card.pack(fill="x", pady=(0, 8))
+        self._account_cards[str(self.master_cfg.login)] = card
+
+        # Rebuild slave cards
+        for sc in [s for s in self.slave_cfgs if s.enabled]:
+            card = AccountCard(self._list_scroll, sc, is_master=False)
+            card.pack(fill="x", pady=(0, 8))
+            self._account_cards[str(sc.login)] = card
 
     # ── Clean shutdown ────────────────────────────────────────────────────────
 
