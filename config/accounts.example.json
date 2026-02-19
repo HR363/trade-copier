@@ -1,0 +1,44 @@
+{
+  "_readme": "Copy this file to accounts.json and fill in your real credentials.",
+  "master": {
+    "name": "Master Account",
+    "login": 123456789,
+    "password": "YOUR_PASSWORD",
+    "server": "YourBroker-Server",
+    "terminal_path": "C:\\Program Files\\MetaTrader 5\\terminal64.exe",
+    "comment": "The account you trade on manually"
+  },
+  "slaves": [
+    {
+      "name": "Slave Account 1",
+      "login": 987654321,
+      "password": "SLAVE1_PASSWORD",
+      "server": "Broker2-Server",
+      "terminal_path": "C:\\Program Files\\MetaTrader 5 - Broker2\\terminal64.exe",
+      "enabled": true,
+      "lot_mode": "multiplier",
+      "lot_value": 1.0,
+      "comment": "Same lot size as master (1.0x multiplier)"
+    },
+    {
+      "name": "Slave Account 2 (Mobile)",
+      "login": 111222333,
+      "password": "SLAVE2_PASSWORD",
+      "server": "Broker3-Server",
+      "terminal_path": "C:\\Program Files\\MetaTrader 5 - Broker3\\terminal64.exe",
+      "enabled": true,
+      "lot_mode": "fixed",
+      "lot_value": 0.01,
+      "comment": "Always trade 0.01 lot (the account I normally use on mobile)"
+    }
+  ],
+  "settings": {
+    "poll_interval_ms": 500,
+    "copy_stop_loss": true,
+    "copy_take_profit": true,
+    "copy_pending_orders": false,
+    "max_retries": 3,
+    "retry_delay_ms": 200,
+    "log_level": "INFO"
+  }
+}
