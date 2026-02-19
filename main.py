@@ -2,9 +2,10 @@
 MT5 Trade Copier — entry point.
 
 Usage:
-    python main.py                         # uses config/accounts.json
+    python main.py                              # launch UI (default)
+    python main.py --headless                   # run without UI (console only)
     python main.py --config path/to/config.json
-    python main.py --check                 # validate config & test connections only
+    python main.py --check                      # validate config & test connections only
 """
 
 import argparse
@@ -38,6 +39,11 @@ def main():
         "--config",
         default=os.path.join(ROOT, "config", "accounts.json"),
         help="Path to accounts.json config file",
+    )
+    parser.add_argument(
+        "--headless",
+        action="store_true",
+        help="Run without the UI (console-only mode)",
     )
     parser.add_argument(
         "--check",
@@ -114,18 +120,38 @@ def main():
         )
         sys.exit(1)
 
-    # --- Start copier ---
-    copier = TradeCopier(
+    # --- Launch UI (default) or headless mode ---
+    if args.headless:
+        copier = TradeCopier(
+            master_config=master_config,
+            slave_configs=slave_configs,
+            settings=settings,
+        )
+        try:
+            copier.start()
+        except Exception as e:
+            logger.error(f"Fatal error in copier: {e}", exc_info=True)
+            sys.exit(1)
+    else:
+        _launch_ui(master_config, slave_configs, settings)
+
+
+def _launch_ui(master_config, slave_configs, settings):
+    """Launch the CustomTkinter UI."""
+    try:
+        from src.ui_app import TradeCopierApp
+    except ImportError as e:
+        print(f"\n{Colors.RED}[UI ERROR]{Colors.RESET} Could not import UI: {e}")
+        print(f"Run:  pip install customtkinter\n")
+        sys.exit(1)
+
+    app = TradeCopierApp(
         master_config=master_config,
         slave_configs=slave_configs,
         settings=settings,
     )
-
-    try:
-        copier.start()
-    except Exception as e:
-        logger.error(f"Fatal error in copier: {e}", exc_info=True)
-        sys.exit(1)
+    app.protocol("WM_DELETE_WINDOW", app.on_close)
+    app.mainloop()
 
 
 def _run_connection_check(master_config, slave_configs):

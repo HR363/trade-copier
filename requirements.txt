@@ -4,5 +4,8 @@
 # MetaTrader5 Python integration (Windows only)
 MetaTrader5>=5.0.45
 
+# Modern UI framework
+customtkinter>=5.2.0
+
 # Optional: colored output on older Windows terminals (already built-in on Win10+)
 colorama>=0.4.6
